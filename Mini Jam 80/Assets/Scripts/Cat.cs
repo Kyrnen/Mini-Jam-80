@@ -1,93 +1,190 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Cat : MonoBehaviour
 {
-    bool ownsCat = true;
+    public GameManager gm;
     //Stats
-    bool isBaby;
-    bool isHungry = true;
-    bool isPlayful = true;
-    bool isHealthy = false;
-    bool isTired = true;
-    bool hasDeuce = true;
+    //Age
+    public bool isBaby;
 
-    public GameObject[] healthMarker;
-    
+    //Healthy
+    public bool isHealthy = true;
     public int health;
-    public int hunger;
+    int maxHealth;
+
+    //Happy
+    bool isPlayful = true;
+    bool isHappy = true;
     public int happiness;
+    int maxHappy;
 
-    int currentHealth;
-    int currentHunger;
-    int currentHappiness;
+    //Hungry
+    bool isFull = false;
+    int fullness;
+    int maxFullMeter;
 
-    public void Feed()
+    //Sleep
+    bool hasEnergy = true;
+    int tiredScale;
+    bool isSleeping = false;
+    
+    //Care
+    bool hasDeuce = true;
+    int cleanliness;
+
+    int kittyMax = 150;
+    int catMax = 200;
+    int maxForAge;
+    int low = 20;
+
+
+    public void FeedCats()
     {
         //place food
         Debug.Log("Cat is being Fed");
-
-        if (!ownsCat && isHungry)
+        if (fullness <= maxForAge)
         {
-            Debug.Log("Cat Spawns");
-            //update all the necessary things with cat coming to life
+            Debug.Log("Cat is hungry. Cat is eat. +20");
+            fullness += 20;
+            Debug.Log(fullness);
         }
-
-        currentHunger += 5;
-        Debug.Log(currentHunger);
+        else
+        {
+            Debug.Log("Cat is being overfed. -10 health. - 10 happy");
+            IncrementHealth(-10);
+            IncrementHappiness(-10);
+        }
     }
 
     public void Play()
     {
         Debug.Log("Playing with cat");
-        if(ownsCat) currentHappiness += 5;
-    }
-
-    public void Clean()
-    {
-        if(hasDeuce)
+        if(!hasEnergy)
         {
-            Debug.Log("Picking up poo");
-        }
-    }
-
-    public void Care()
-    {
-        if(!isHealthy)
-        {
-            Debug.Log("Feeding medicine");
-            //after a certain amount of times...
-            isHealthy = true;
+            if (isPlayful)
+            {
+                IncrementHappiness(10);
+                IncrementTired(15);
+            }
+            else
+            {
+                IncrementHappiness(15);
+                IncrementTired(15);
+            }
         }
         else
         {
-            Debug.Log("Don't feed cat medicine if not sick.");
-            currentHappiness -= 5;
+            IncrementHappiness(-8);
+            //lock play maybe
+            //next command will be sleep
         }
 
     }
 
+    public void ApplyCleanEffect()
+    {
+        Debug.Log("Picking up poo");
+        IncrementCleanliness(10);
+    }
+
+    public void ApplyMedicineCorrectly()
+    {
+        Debug.Log("Feeding medicine");
+        IncrementHealth(10);
+        if (health >= low + 30)
+        {
+            isHealthy = true;
+            //deactivate sick conditions
+        }
+    }
+
+    public void ApplyMedicineIncorrectly()
+    {
+        Debug.Log("Don't feed cat medicine if not sick.");
+        IncrementHappiness(-5);
+        IncrementHealth(-3);
+    }
+
+
+    void IncrementStat(int stat, int by, bool r)
+    {
+        if (stat <= low && !r)
+        {
+            r = true;
+            //SetSickCondition, poo rate goes up, playful rate goes down, tired meter increases
+            Debug.Log("Cat is sick. Cat requires Healing");
+        }
+        else if (stat <= 0)
+        {
+            Debug.Log("Cat is leaving. You suck.");
+        }
+        else
+        {
+            stat += by;
+            if (stat >= low + 30)
+            {
+                r = false;
+                //Turn off Sick condition
+            }
+        }
+    }
+
+    public void IncrementHealth(int i)
+    {
+        IncrementStat(health, i, isHealthy);
+    }
+
+    public void IncrementHappiness(int i)
+    {
+        IncrementStat(happiness, i, isHappy);
+    }
+
+   public void IncrementTired(int i)
+    {
+        IncrementStat(tiredScale, i, hasEnergy);
+    }
+
+    public void IncrementCleanliness(int i)
+    {
+        IncrementHealth(5);
+        IncrementHappiness(5);
+    }
+
+    
     public void Pet()
     {
-        currentHappiness += 1;
+        happiness += 1;
     }
 
     public void UpdateHealth()
     {
         //if the health and happiness of cat reach a certain threshold for a certain amount of time, then the cat is considered healthy
-        currentHealth += 5;
+        health += 5;
+    }
+
+    public void UpdateCat()
+    {
+        //update stat boxes appropriately
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        currentHealth = currentHappiness = currentHunger = 1;
+        if(isBaby) 
+         maxForAge = kittyMax; 
+        else 
+         maxForAge = catMax;
+
+        //for debug
+        happiness = fullness = health = 30;
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+
     }
 }
