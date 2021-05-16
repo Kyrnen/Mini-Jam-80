@@ -11,7 +11,11 @@ public class GameManager : MonoBehaviour
     public bool hasDeuce;
 
     public GameObject catPrefab;
+    public GameObject heartPrefab;
+
     public Canvas gameCanvas;
+    public GameObject healthHeartMeter;
+    public GameObject happyHeartMeter;
 
     public List<Cat> cats;
     // Start is called before the first frame update
@@ -24,11 +28,6 @@ public class GameManager : MonoBehaviour
        
     }
 
-    void CheckHeartStatus()
-    {
-
-    }
-
     void SpawnCat()
     {
         Instantiate(catPrefab);
@@ -36,13 +35,22 @@ public class GameManager : MonoBehaviour
         ownsCat = true;
         GameObject cat = GameObject.FindGameObjectWithTag("Cat");
         cat.transform.SetParent(gameCanvas.transform, false);
-        cat.transform.SetSiblingIndex(0);
+        cat.transform.SetAsFirstSibling();
         Cat c = cat.GetComponent<Cat>();
-        c.gm = this;
         cats.Add(c);
-        
+
+        //need to finish logic on this
+        c.isBaby = true;
 
         Debug.Log(cats.Count());
+    }
+
+    void AddHearts()
+    {
+        GameObject[] newHearts = {Instantiate(heartPrefab), Instantiate(heartPrefab)};
+
+        newHearts[0].transform.SetParent(healthHeartMeter.transform, false);
+        newHearts[1].transform.SetParent(happyHeartMeter.transform, false);
     }
 
     public void Feed()
@@ -121,9 +129,28 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void BecomeAdult()
+    {
+        foreach(Cat c in cats)
+        {
+            if(c.isBaby && c.CheckHeartStatusFull())
+            {
+                c.SetAgeToAdult();
+                AddHearts();
+            }
+            Debug.Log("My baby is an adult now");
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
-        
+        //For Debug
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+            Debug.Log("Pressed");
+            BecomeAdult();
+        }
     }
+
 }

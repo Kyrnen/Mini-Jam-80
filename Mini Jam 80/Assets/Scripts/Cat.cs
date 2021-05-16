@@ -5,7 +5,6 @@ using UnityEngine;
 
 public class Cat : MonoBehaviour
 {
-    public GameManager gm;
     //Stats
     //Age
     public bool isBaby;
@@ -13,18 +12,15 @@ public class Cat : MonoBehaviour
     //Healthy
     public bool isHealthy = true;
     public int health;
-    int maxHealth;
 
     //Happy
     bool isPlayful = true;
     bool isHappy = true;
     public int happiness;
-    int maxHappy;
 
     //Hungry
     bool isFull = false;
     int fullness;
-    int maxFullMeter;
 
     //Sleep
     bool hasEnergy = true;
@@ -32,23 +28,54 @@ public class Cat : MonoBehaviour
     bool isSleeping = false;
     
     //Care
-    bool hasDeuce = true;
     int cleanliness;
 
-    int kittyMax = 150;
-    int catMax = 200;
-    int maxForAge;
+    const int kittyMax = 150;
+    const int catMax = 200;
+    public int maxForAge;
     int low = 20;
 
+    void Start()
+    {
+        if (isBaby)
+            maxForAge = kittyMax;
+        else
+            maxForAge = catMax;
+
+        //for debug
+        happiness = fullness = health = 30;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+       
+    }
+
+    public void SetAgeToAdult()
+    {
+        isBaby = false;
+        maxForAge = catMax;
+        //swap out sprite
+    }
+    public bool CheckHeartStatusFull()
+    {
+        //for debug
+        return true;
+    }
 
     public void FeedCats()
     {
         //place food
         Debug.Log("Cat is being Fed");
-        if (fullness <= maxForAge)
+        if (!isFull)
         {
             Debug.Log("Cat is hungry. Cat is eat. +20");
             fullness += 20;
+            if(fullness >= maxForAge)
+            {
+                isFull = true;
+            }
             Debug.Log(fullness);
         }
         else
@@ -171,20 +198,5 @@ public class Cat : MonoBehaviour
     }
 
     // Start is called before the first frame update
-    void Start()
-    {
-        if(isBaby) 
-         maxForAge = kittyMax; 
-        else 
-         maxForAge = catMax;
 
-        //for debug
-        happiness = fullness = health = 30;
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
-    }
 }
