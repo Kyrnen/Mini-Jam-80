@@ -1,22 +1,32 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Cat : MonoBehaviour
 {
     //Stats
+    public string catName = "Sir Fluffles";
+    
+    public Image catSprite;
+    public Image effect;
+    int spriteNumber;
+    public GameManager gm;
+
     //Age
-    public bool isBaby;
+    public bool isBaby = true;
+    public string ageText = "Age: Kitten";
 
     //Healthy
     public bool isHealthy = true;
     public int health;
+    public float healthHeartCounter;
 
     //Happy
-    bool isPlayful = true;
-    bool isHappy = true;
     public int happiness;
+    public float happyHeartCounter;
 
     //Hungry
     bool isFull = false;
@@ -26,106 +36,198 @@ public class Cat : MonoBehaviour
     bool hasEnergy = true;
     int tiredScale;
     bool isSleeping = false;
-    
-    //Care
-    int cleanliness;
+    int sleepTimer = 200;
 
-    const int kittyMax = 150;
-    const int catMax = 200;
+    //Care
+    public bool hygenic = true;
+
+    const int kittyMax = 120;
+    const int catMax = 160;
+    
     public int maxForAge;
-    int low = 20;
+    public float maxHearts;
+    int low = 10;
+
+    bool statApplied = false;
 
     void Start()
     {
-        if (isBaby)
-            maxForAge = kittyMax;
-        else
-            maxForAge = catMax;
+        isBaby = true;
+        ageText = "Age: Kitten";
 
-        //for debug
-        happiness = fullness = health = 30;
+        if (isBaby)
+        {
+            maxForAge = kittyMax;
+            spriteNumber = Random.Range(0, gm.kittenSprites.Count());
+            catSprite.sprite = gm.kittenSprites[spriteNumber];
+        }
+
+        if(gm.cats.Count() > 1)
+        {
+            name = "Sir Fluffles II";
+        }
+        else
+        {
+            name = "Sir Fluffles";
+        }
+
+        healthHeartCounter = happyHeartCounter = 0;
+        health = 60;
+        happiness = 15;
+        fullness = 5;
+        tiredScale = 0;
+        
     }
+
 
     // Update is called once per frame
     void Update()
     {
-       
+        StartCoroutine(StatsOverTime());
+    }
+
+    IEnumerator StatsOverTime()
+    {
+        if (!statApplied)
+        {
+            statApplied = true;
+            yield return new WaitForSeconds(200);
+            IncrementHealth(-5);
+            IncrementFull(-5);
+            IncrementTired(5);
+            statApplied = false;
+        }
+    }
+
+    public void FeedCats()
+    {
+        if (!isSleeping)
+        {
+            //place food
+            IncrementFull(30);
+            IncrementHealth(10);
+            IncrementHappiness(5);
+        }
     }
 
     public void SetAgeToAdult()
     {
         isBaby = false;
         maxForAge = catMax;
-        //swap out sprite
+        catSprite.sprite = gm.catSprites[spriteNumber];
     }
     public bool CheckHeartStatusFull()
     {
-        //for debug
-        return true;
-    }
-
-    public void FeedCats()
-    {
-        //place food
-        Debug.Log("Cat is being Fed");
-        if (!isFull)
+        if (isBaby && happyHeartCounter == 3 && healthHeartCounter == 3)
         {
-            Debug.Log("Cat is hungry. Cat is eat. +20");
-            fullness += 20;
-            if(fullness >= maxForAge)
-            {
-                isFull = true;
-            }
-            Debug.Log(fullness);
+            return true;
+        }
+        else if (!isBaby && happyHeartCounter == 4f && healthHeartCounter == 4f)
+        {
+            return true;
         }
         else
         {
-            Debug.Log("Cat is being overfed. -10 health. - 10 happy");
-            IncrementHealth(-10);
-            IncrementHappiness(-10);
+            return false;
         }
     }
 
+  
+
     public void Play()
     {
-        Debug.Log("Playing with cat");
-        if(!hasEnergy)
+        if(!isSleeping)
         {
-            if (isPlayful)
-            {
-                IncrementHappiness(10);
-                IncrementTired(15);
-            }
-            else
+            Debug.Log("Playing with cat");
+            if (hasEnergy)
             {
                 IncrementHappiness(15);
                 IncrementTired(15);
             }
+            else
+            {
+                IncrementHappiness(5);
+                IncrementTired(15);
+            }
         }
         else
         {
-            IncrementHappiness(-8);
-            //lock play maybe
-            //next command will be sleep
+            IncrementHappiness(-5);
         }
 
+        CheckSleepingConditions();
+
     }
 
+    public void IncrementTired(int i)
+    {
+        if (tiredScale + i > maxForAge)
+        {
+            tiredScale = maxForAge;
+        }
+        else
+        {
+            tiredScale += i;
+        }
+    }
+
+    void CheckSleepingConditions()
+    {
+        if (tiredScale >= maxForAge)
+        {
+            tiredScale = maxForAge;
+            hasEnergy = false;
+
+            if(!isSleeping)
+            {
+                effect.gameObject.SetActive(true);
+                effect.sprite = gm.effects[3];
+                isSleeping = true;
+                StartCoroutine(WakeCat());
+                Debug.Log("Cat is sleeping");
+            }
+            else
+            {
+                Debug.Log("Cat be sleeping");
+            }   
+        }
+    }
+
+    IEnumerator WakeCat()
+    {
+        yield return new WaitForSeconds(sleepTimer);
+
+        isSleeping = false;
+        hasEnergy = true;
+        tiredScale = 0;
+
+        isFull = false;
+        fullness = 15;
+
+        effect.gameObject.SetActive(false);
+    }
+
+   
     public void ApplyCleanEffect()
     {
-        Debug.Log("Picking up poo");
-        IncrementCleanliness(10);
+        if (gm.hasDeuce)
+        {
+            Debug.Log("Picking up poo");
+            IncrementCleanliness(5);
+        }
     }
+    public void IncrementCleanliness(int i)
+    {
+        IncrementHealth(i);
+        IncrementHappiness(i);
+    }
+
 
     public void ApplyMedicineCorrectly()
     {
         Debug.Log("Feeding medicine");
         IncrementHealth(10);
-        if (health >= low + 30)
-        {
-            isHealthy = true;
-            //deactivate sick conditions
-        }
+        IncrementHappiness(3);
     }
 
     public void ApplyMedicineIncorrectly()
@@ -135,66 +237,149 @@ public class Cat : MonoBehaviour
         IncrementHealth(-3);
     }
 
-
-    void IncrementStat(int stat, int by, bool r)
+    void IncrementHealth(int i)
     {
-        if (stat <= low && !r)
+        if (isHealthy)
         {
-            r = true;
-            //SetSickCondition, poo rate goes up, playful rate goes down, tired meter increases
-            Debug.Log("Cat is sick. Cat requires Healing");
-        }
-        else if (stat <= 0)
-        {
-            Debug.Log("Cat is leaving. You suck.");
-        }
-        else
-        {
-            stat += by;
-            if (stat >= low + 30)
+            if (health + i > maxForAge)
             {
-                r = false;
-                //Turn off Sick condition
+                health = maxForAge;
             }
+            else
+            {
+                health += i;
+            }
+        }
+
+        healthHeartCounter = UpdateHeartCounter(healthHeartCounter, health);
+    }
+
+    public void CheckHealthState()
+    {
+        if (health <= low)
+        {
+            Debug.Log("Your cat isn't feeling too good. Please take care of your cat");
+            ChangeStateSick(true);
+        }
+        else if (!isHealthy && health >= low + 30)
+        {
+            ChangeStateSick(false);
         }
     }
 
-    public void IncrementHealth(int i)
+    public void ChangeStateSick(bool status)
     {
-        IncrementStat(health, i, isHealthy);
+        isHealthy = !status;
+        hasEnergy = !status;
+
+        effect.gameObject.SetActive(!status);
+        
+        if (status)
+            effect.sprite = gm.effects[2];
+    }
+
+    
+
+    float UpdateHeartCounter(float heartCounter, int stat)
+    {
+        if (stat < 20)
+        {
+            heartCounter = 0;
+        }
+        else if (stat >= 20 && stat < 40)
+        {
+            heartCounter = .5f;
+        }
+        else if (stat >= 40 && stat < 60)
+        {
+            heartCounter =1f;
+        }
+        else if (stat >= 60 && stat < 80)
+        {
+            heartCounter = 1.5f;
+        }
+        else if (stat >= 80 && stat < 100)
+        {
+            heartCounter  = 2f;
+        }
+        else if (stat >= 100 && stat < 120)
+        {
+            heartCounter = 2.5f;
+        }
+        else if (stat >= 120 && stat < 140)
+        {
+            heartCounter = 3f;
+        }
+        else if (stat >= 140 && stat < 160)
+        {
+            heartCounter = 3.5f;
+        }
+        else
+        {
+            heartCounter = 4f;
+        }
+        return heartCounter;
     }
 
     public void IncrementHappiness(int i)
     {
-        IncrementStat(happiness, i, isHappy);
+        if (happiness + i >= maxForAge)
+        {
+            happiness = maxForAge;
+        }
+        else
+        {
+            happiness += i;
+            
+            if(i < 0)
+            {
+                //happiness is being decremented
+                effect.gameObject.SetActive(true);
+                effect.sprite = gm.effects[0];
+                //wait for a few seconds for animation to play
+                effect.gameObject.SetActive(false);
+            }
+            else if (i > 0)
+            {
+                effect.gameObject.SetActive(true);
+                effect.sprite = gm.effects[1];
+                //wait for a few seconds for animation to play
+                effect.gameObject.SetActive(false);
+            }
+        }
+
+        happyHeartCounter = UpdateHeartCounter(happyHeartCounter, happiness);
     }
 
-   public void IncrementTired(int i)
+
+
+    void IncrementFull(int i)
     {
-        IncrementStat(tiredScale, i, hasEnergy);
+        if (fullness + i >= maxForAge)
+        {
+            if (!isFull)
+            {  
+                fullness = maxForAge;
+                isFull = true;
+            }
+            else
+            {
+                Debug.Log("Cat is being overfed. -20 health. - 10 happy. Health: " + health + ", Happy: " + happiness);
+                IncrementHealth(-20);
+                IncrementHappiness(-10);
+            }
+        }
+        else
+        {
+            fullness += i;
+        }
     }
 
-    public void IncrementCleanliness(int i)
-    {
-        IncrementHealth(5);
-        IncrementHappiness(5);
-    }
 
-    
+
     public void Pet()
     {
         happiness += 1;
-    }
-
-    public void UpdateHealth()
-    {
-        //if the health and happiness of cat reach a certain threshold for a certain amount of time, then the cat is considered healthy
-        health += 5;
-    }
-
-    public void UpdateCat()
-    {
-        //update stat boxes appropriately
     }
 
     // Start is called before the first frame update
