@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-
+using System.Numerics;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,6 +11,7 @@ public class GameManager : MonoBehaviour
     public bool ownsCat;
 
     public bool hasDeuce;
+    public Animator litterboxAnim;
     bool activeButtons = false;
 
     public Text currentCatName;
@@ -20,6 +21,9 @@ public class GameManager : MonoBehaviour
     //These shouldn't be changed ever
     [SerializeField] GameObject catPrefab;
     [SerializeField] GameObject heartPrefab;
+    [SerializeField] GameObject litterbox;
+    public GameObject foodBowl;
+    public GameObject toy;
 
     public Sprite[] kittenSprites;
     public Sprite[] catSprites;
@@ -39,7 +43,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] Button nextCat;
 
 
-    public Canvas gameCanvas;
+    public GameObject gameCanvas;
     [SerializeField] GameObject statsPanel;
     public GameObject healthHeartMeter;
     public GameObject happyHeartMeter;
@@ -58,6 +62,7 @@ public class GameManager : MonoBehaviour
     {
         cats = new List<Cat>();
         EnableInteraction();
+        hasDeuce = false;
     }
 
     void SpawnCat()
@@ -66,14 +71,13 @@ public class GameManager : MonoBehaviour
         ownsCat = true;
         GameObject cat = GameObject.FindGameObjectWithTag("Cat");
         cat.transform.SetParent(gameCanvas.transform, false);
-        cat.transform.SetAsFirstSibling();
+        cat.transform.SetSiblingIndex(1);
         Cat c = cat.GetComponent<Cat>();
         cats.Add(c);
         c.gm = this;
 
         activeButtons = true;
         EnableInteraction();
-        hasDeuce = false;
     }
 
     public void ShowStats(int i)
@@ -280,9 +284,11 @@ public class GameManager : MonoBehaviour
 
             foreach (Cat c in cats)
             {
-                c.FeedCats();
+                StartCoroutine(c.FeedCats());
                 //check if the cat is still healthy. if not, then indicate this
-                c.CheckHealthState(); 
+                c.CheckHealthState();
+
+                Debug.Log(c.isHealthy + " " + c.health);
                 if (!c.isHealthy && c.health <= 0)
                 {
                     Debug.Log("Cat is leaving. You suck.");
@@ -314,7 +320,7 @@ public class GameManager : MonoBehaviour
         {
             foreach (Cat c in cats)
             {
-                c.Play();
+                StartCoroutine(c.Play());
             }
         }
     }
@@ -331,15 +337,25 @@ public class GameManager : MonoBehaviour
                 }
                 //clean out litter box
                 hasDeuce = false;
-                Debug.Log(hasDeuce);
+
+                StartCoroutine(CleanUpAnimation());
             }
         }
+    }
+
+    IEnumerator CleanUpAnimation()
+    {
+        litterboxAnim.SetBool("isDirty", false);
+        litterboxAnim.SetBool("cleaning", true);
+        yield return new WaitForSeconds(1);
+        litterboxAnim.SetBool("cleaning", false);
     }
 
     void CheckCleanliness()
     {
         if(hasDeuce)
         {
+            litterboxAnim.SetBool("isDirty", true);
             foreach (Cat c in cats)
             {
                 if (c.hygenic)
@@ -473,31 +489,40 @@ public class GameManager : MonoBehaviour
             eventOccurred = true;
             yield return new WaitForSeconds(timeBetweenEvents);
             int randomEvent = Random.Range(0, 5);
+            foreach(Cat c in cats)
+            { 
 
-            switch (randomEvent)
-            {
-                case 0:
-                    hasDeuce = true;
-                    break;
-                case 1:
-                    if (!cats[0].isHealthy)
-                    {
+                switch (randomEvent)
+                {
+                    case 0:
                         hasDeuce = true;
-                    }
-                    break;
-                case 2:
-                    break;
-                case 3:
-                    break;
-                case 4:
-                    foreach (Cat c in cats)
-                    {
+                        break;
+                    case 1:
+                        if (!cats[0].isHealthy)
+                        {
+                            hasDeuce = true;
+                        }
+                        else
+                        {
+                            c.catAnim.SetBool("Walking", true);
+                            yield return new WaitForSeconds(10);
+                            c.catAnim.SetBool("Walking", false);
+                        }
+                        break;
+                    case 2:
+                        c.tiredScale = c.maxForAge;
+                        break;
+                    case 3:
+                        c.catAnim.SetBool("Walking", true);
+                        yield return new WaitForSeconds(10);
+                        c.catAnim.SetBool("Walking", false);
+                        break;
+                    case 4:
                         //cat randomly gets sick 1/5 chance
                         c.isHealthy = false;
                         c.ChangeStateSick(true);
-                    }
-                    break;
-
+                        break;
+                }
             }
             eventOccurred = false;
         }

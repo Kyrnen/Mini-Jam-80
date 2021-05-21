@@ -7,6 +7,8 @@ using UnityEngine.UI;
 
 public class Cat : MonoBehaviour
 {
+    public Animator catAnim;
+    public Animator emoteAnim;
     //Stats
     public string catName = "Sir Fluffles";
     
@@ -34,7 +36,7 @@ public class Cat : MonoBehaviour
 
     //Sleep
     bool hasEnergy = true;
-    int tiredScale;
+    public int tiredScale;
     bool isSleeping = false;
     int sleepTimer = 200;
 
@@ -60,15 +62,18 @@ public class Cat : MonoBehaviour
             maxForAge = kittyMax;
             spriteNumber = Random.Range(0, gm.kittenSprites.Count());
             catSprite.sprite = gm.kittenSprites[spriteNumber];
+
+            catAnim.SetBool("isBaby", isBaby);
+            catAnim.SetInteger("Fur", spriteNumber);
         }
 
         if(gm.cats.Count() > 1)
         {
-            name = "Sir Fluffles II";
+            name = catName = "Sir Fluffles II";
         }
         else
         {
-            name = "Sir Fluffles";
+            name = catName = "Sir Fluffles";
         }
 
         healthHeartCounter = happyHeartCounter = 0;
@@ -83,12 +88,14 @@ public class Cat : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        CheckSleepingConditions();
+        CheckHungry();
         StartCoroutine(StatsOverTime());
     }
 
     IEnumerator StatsOverTime()
     {
-        if (!statApplied)
+        if (!statApplied && !isSleeping)
         {
             statApplied = true;
             yield return new WaitForSeconds(200);
@@ -99,14 +106,30 @@ public class Cat : MonoBehaviour
         }
     }
 
-    public void FeedCats()
+    public IEnumerator FeedCats()
     {
         if (!isSleeping)
         {
-            //place food
+            gm.foodBowl.SetActive(true);
             IncrementFull(30);
-            IncrementHealth(10);
-            IncrementHappiness(5);
+
+            catAnim.SetBool("Hungry", true);
+            yield return new WaitForSeconds(3);
+            catAnim.SetBool("Hungry", false);
+
+            gm.foodBowl.SetActive(false);
+        }
+    }
+
+    void CheckHungry()
+    {
+        if(fullness <= low)
+        {
+            catAnim.SetBool("Hungry", true);
+        }
+        else
+        {
+            catAnim.SetBool("Hungry", false);
         }
     }
 
@@ -115,6 +138,8 @@ public class Cat : MonoBehaviour
         isBaby = false;
         maxForAge = catMax;
         catSprite.sprite = gm.catSprites[spriteNumber];
+
+        catAnim.SetBool("isBaby", false);
     }
     public bool CheckHeartStatusFull()
     {
@@ -134,29 +159,26 @@ public class Cat : MonoBehaviour
 
   
 
-    public void Play()
+    public IEnumerator Play()
     {
         if(!isSleeping)
         {
             Debug.Log("Playing with cat");
             if (hasEnergy)
             {
-                IncrementHappiness(15);
+                StartCoroutine(IncrementHappiness(15));
                 IncrementTired(15);
             }
             else
             {
-                IncrementHappiness(5);
+                StartCoroutine(IncrementHappiness(5));
                 IncrementTired(15);
             }
-        }
-        else
-        {
-            IncrementHappiness(-5);
-        }
 
-        CheckSleepingConditions();
-
+            gm.toy.gameObject.SetActive(true);
+            yield return new WaitForSeconds(2);
+            gm.toy.gameObject.SetActive(false);
+        }
     }
 
     public void IncrementTired(int i)
@@ -178,23 +200,27 @@ public class Cat : MonoBehaviour
             tiredScale = maxForAge;
             hasEnergy = false;
 
-            if(!isSleeping)
+            if (!isSleeping) //if cat is not already sleeping
             {
-                effect.gameObject.SetActive(true);
-                effect.sprite = gm.effects[3];
                 isSleeping = true;
                 StartCoroutine(WakeCat());
                 Debug.Log("Cat is sleeping");
             }
             else
             {
-                Debug.Log("Cat be sleeping");
-            }   
+                if (!effect.isActiveAndEnabled)
+                {
+                    effect.gameObject.SetActive(true);
+                    effect.sprite = gm.effects[3];
+                    emoteAnim.SetBool("isSleeping", true);
+                }
+            }
         }
     }
 
     IEnumerator WakeCat()
     {
+        catAnim.SetBool("isSleeping", true);
         yield return new WaitForSeconds(sleepTimer);
 
         isSleeping = false;
@@ -204,6 +230,8 @@ public class Cat : MonoBehaviour
         isFull = false;
         fullness = 15;
 
+        catAnim.SetBool("isSleeping", false);
+        emoteAnim.SetBool("isSleeping", false);
         effect.gameObject.SetActive(false);
     }
 
@@ -219,7 +247,7 @@ public class Cat : MonoBehaviour
     public void IncrementCleanliness(int i)
     {
         IncrementHealth(i);
-        IncrementHappiness(i);
+        StartCoroutine(IncrementHappiness(i));
     }
 
 
@@ -227,14 +255,15 @@ public class Cat : MonoBehaviour
     {
         Debug.Log("Feeding medicine");
         IncrementHealth(10);
-        IncrementHappiness(3);
+        StartCoroutine(IncrementHappiness(3));
     }
 
     public void ApplyMedicineIncorrectly()
     {
         Debug.Log("Don't feed cat medicine if not sick.");
-        IncrementHappiness(-5);
+        StartCoroutine(IncrementHappiness(-5));
         IncrementHealth(-3);
+
     }
 
     void IncrementHealth(int i)
@@ -248,6 +277,13 @@ public class Cat : MonoBehaviour
             else
             {
                 health += i;
+            }
+        }
+        else
+        {
+            if (health + i <= 0)
+            {
+                health = 0;
             }
         }
 
@@ -272,10 +308,11 @@ public class Cat : MonoBehaviour
         isHealthy = !status;
         hasEnergy = !status;
 
-        effect.gameObject.SetActive(!status);
-        
+        effect.gameObject.SetActive(status);
         if (status)
             effect.sprite = gm.effects[2];
+        
+        emoteAnim.SetBool("isSick", status);
     }
 
     
@@ -321,7 +358,7 @@ public class Cat : MonoBehaviour
         return heartCounter;
     }
 
-    public void IncrementHappiness(int i)
+    public IEnumerator IncrementHappiness(int i)
     {
         if (happiness + i >= maxForAge)
         {
@@ -329,23 +366,30 @@ public class Cat : MonoBehaviour
         }
         else
         {
-            happiness += i;
-            
-            if(i < 0)
-            {
-                //happiness is being decremented
-                effect.gameObject.SetActive(true);
-                effect.sprite = gm.effects[0];
-                //wait for a few seconds for animation to play
-                effect.gameObject.SetActive(false);
-            }
-            else if (i > 0)
-            {
-                effect.gameObject.SetActive(true);
-                effect.sprite = gm.effects[1];
-                //wait for a few seconds for animation to play
-                effect.gameObject.SetActive(false);
-            }
+            happiness += i; 
+        }
+
+        if(i < 0)//happiness is being decremented
+        {
+            effect.gameObject.SetActive(true) ;
+            effect.sprite = gm.effects[0];
+
+            emoteAnim.SetBool("isAngry", true);
+            yield return new WaitForSeconds(1.5f);//wait for a few seconds for animation to play
+            emoteAnim.SetBool("isAngry", false);
+
+            effect.gameObject.SetActive(false);
+        }
+        else if (i > 0)
+        {
+            effect.gameObject.SetActive(true);
+            effect.sprite = gm.effects[1];
+
+            emoteAnim.SetBool("isHappy", true);
+            yield return new WaitForSeconds(1.5f);//wait for a few seconds for animation to play
+            emoteAnim.SetBool("isHappy", false);
+
+            effect.gameObject.SetActive(false);
         }
 
         happyHeartCounter = UpdateHeartCounter(happyHeartCounter, happiness);
@@ -366,12 +410,14 @@ public class Cat : MonoBehaviour
             {
                 Debug.Log("Cat is being overfed. -20 health. - 10 happy. Health: " + health + ", Happy: " + happiness);
                 IncrementHealth(-20);
-                IncrementHappiness(-10);
+                StartCoroutine(IncrementHappiness(-10));
             }
         }
         else
         {
             fullness += i;
+            IncrementHealth(10);
+            StartCoroutine(IncrementHappiness(5));
         }
     }
 
